@@ -1,0 +1,49 @@
+version: '3'
+networks:
+    Osspoo:
+      driver: bridge
+      ipam:
+        driver: default
+        config:
+          - subnet: 10.0.43.0/29
+services:
+    oss_poo:
+        build:
+            context: .
+            dockerfile: Dockerfile
+            args:
+                buildno: 1
+        container_name: oss-poo
+        restart: unless-stopped
+        extra_hosts:
+            - "host.docker.internal: 172.19.180.125"
+        ports:
+            - 80:80/tcp
+        tty: true
+        volumes:
+            - ../code:/var/www/html
+            - ./web/000-default.conf:/etc/apache2/sites-available/000-default.conf
+            - ./web/apache2.conf/:/etc/apache2/apache2.conf
+            - ./web/php.ini/:/usr/local/etc/php/php.ini
+        networks:
+            Osspoo:
+                ipv4_address: 10.0.43.2
+        depends_on: 
+            - db_oss_poo
+    db_oss_poo:
+      image: mysql:5.7.22
+      command: --innodb-use-native-aio=0
+      ports: 
+          - "3306:3306"
+      volumes:
+          - ./db/data:/var/lib/mysql
+      environment: 
+          MYSQL_DATABASE: oss_poo
+          MYSQL_ROOT: root
+          MYSQL_ROOT_PASSWORD: secret
+          MYSQL_PASSWORD: secret
+      restart:
+          unless-stopped
+      networks:
+            Osspoo:
+                ipv4_address: 10.0.43.3
